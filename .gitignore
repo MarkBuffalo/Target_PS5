@@ -6,4 +6,4 @@ geckodriver.log
 .env
 venv/*
 venv
-*.txt
+
