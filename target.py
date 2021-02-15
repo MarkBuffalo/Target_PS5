@@ -7,10 +7,16 @@ import simpleaudio as sa
 
 
 class ScanTargetApi:
-    def __init__(self):
+    def __init__(self, prod_id=None, prod_name=None):
         self.api_key = "ff457966e64d5e877fdbad070f276d18ecec4a01"
-        self.prod_id = 81114596
-        self.prod_name = "Digital ps5"
+        if prod_id:
+            self.prod_id = prod_id
+        else:
+            self.prod_id = 81114596
+        if prod_name:
+            self.prod_name = prod_name
+        else:
+            self.prod_name = "Digital ps5"
         self.result_limit = 1000
         self.search_radius = 1100
         self.num_results = 0
@@ -91,7 +97,6 @@ class ScanTargetApi:
 
 if __name__ == "__main__":
     print("A sound will play and the link will open once there is stock available")
-    search = ScanTargetApi()
 
     # get run options
     # 0: Digital
@@ -100,20 +105,24 @@ if __name__ == "__main__":
     prod_type = input("Options:\n\t(0) Digital\n\t(1) Non-Digital\n\t(2) Both\n:")
     while prod_type != "0" and prod_type != "1" and prod_type != "2":
         prod_type = input("Invalid option!\nOptions:\n\t(0) Digital\n\t(1) Non-Digital\n\t(2) Both\n:")
-    if prod_type == "1":
-        # set to non-digital product id
-        search.prod_id = 81114595
-        search.prod_name = "Non-Digital ps5"
+
+    searches = []
+
+    if prod_type == "0":
+        # set to digital
+        searches.append(ScanTargetApi(81114596, "Digital ps5"))
+    elif prod_type == "1":
+        # set to non-digital
+        searches.append(ScanTargetApi(81114595, "Non-Digital ps5"))
+    elif prod_type == "2":
+        # set to digital
+        searches.append(ScanTargetApi(81114596, "Digital ps5"))
+        # set to non-digital
+        searches.append(ScanTargetApi(81114595, "Non-Digital ps5"))
 
     s = sched.scheduler(time.time, time.sleep)
-    s.enter(1, 1, search.start_search, (s,))
 
-    # generate second object to query non-digital
-    if prod_type == "2":
-        search2 = ScanTargetApi()
-        # set to non-digital product id
-        search2.prod_id = 81114595
-        search2.prod_name = "Non-Digital ps5"
-        s.enter(1, 1, search2.start_search, (s,))
+    for search in searches:
+        s.enter(1, 1, search.start_search, (s,))
 
     s.run()
