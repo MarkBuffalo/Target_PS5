@@ -7,13 +7,21 @@ import simpleaudio as sa
 
 
 class ScanTargetApi:
-    def __init__(self):
+    def __init__(self, prod_id=None, prod_name=None):
         self.api_key = "ff457966e64d5e877fdbad070f276d18ecec4a01"
+        if prod_id:
+            self.prod_id = prod_id
+        else:
+            self.prod_id = 81114596
+        if prod_name:
+            self.prod_name = prod_name
+        else:
+            self.prod_name = "Digital ps5"
         self.result_limit = 1000
         self.search_radius = 1100
         self.num_results = 0
         self.interval = 15
-        self.audio_file = "wake_up.wav"
+        self.audio_file = "loud_alarm.wav"
         # These zip codes are stragetically placed to cover the entire United States at a radius of 1,100 miles.
         self.zip_codes = [
          94203, # Sacramento, California
@@ -28,13 +36,16 @@ class ScanTargetApi:
         ]
 
     def start_search(self, scheduler):
+        self.num_results = 0
         for z in self.zip_codes:
             self.query_api(z)
+        print(f"Searched {self.num_results} stores for {self.prod_name}... {time.ctime()}")
         s.enter(self.interval, 1, self.start_search, (scheduler,))
 
 
     def query_api(self, zip_code):
-        r = requests.get(f"https://api.target.com/fulfillment_aggregator/v1/fiats/81114596?key={self.api_key}"
+
+        r = requests.get(f"https://api.target.com/fulfillment_aggregator/v1/fiats/{self.prod_id}?key={self.api_key}"
                          f"&nearby={zip_code}"
                          f"&limit={self.result_limit}&requested_quantity=1"
                          f"&radius={self.search_radius}")
@@ -46,7 +57,6 @@ class ScanTargetApi:
 
     def print_results(self, text):
         locations = text.get("products")[0].get("locations")
-        self.num_results = 0
         for loc in locations:
             if type(loc) == dict:
                 store_name = loc.get("store_name")
@@ -64,14 +74,13 @@ class ScanTargetApi:
                 if "NOT_SOLD_IN_STORE" not in in_store_only:
                     if "UNAVAILABLE" not in curbside and "UNAVAILABLE" not in ship_to_store:
                         print(f"Found at store in zip code {zipcode}")
-                        self.open_site("https://www.target.com/p/playstation-5-digital-edition-console/-/A-81114596#lnk=sametab")
+                        self.open_site(f"https://www.target.com/p/playstation-5-digital-edition-console/-/A-{self.prod_id}#lnk=sametab")
                         print("\t".join([store_name, store_address, curbside, ship_to_store, in_store_only]))
                         num_found += 1
                     # else:
                         # print(f"Not found at {zipcode}...")
                         # print(f"Nope: {store_name}: {store_address}: {curbside}, {ship_to_store}, {in_store_only}")
             self.num_results += 1
-        print(f"We searched {self.num_results} stores...")
 
     def open_site(self, url):
         try:
@@ -87,7 +96,33 @@ class ScanTargetApi:
 
 
 if __name__ == "__main__":
-    search = ScanTargetApi()
+    print("A sound will play and the link will open once there is stock available")
+
+    # get run options
+    # 0: Digital
+    # 1: Non-Digital
+    # 2: Both
+    prod_type = input("Options:\n\t(0) Digital\n\t(1) Non-Digital\n\t(2) Both\n:")
+    while prod_type != "0" and prod_type != "1" and prod_type != "2":
+        prod_type = input("Invalid option!\nOptions:\n\t(0) Digital\n\t(1) Non-Digital\n\t(2) Both\n:")
+
+    searches = []
+
+    if prod_type == "0":
+        # set to digital
+        searches.append(ScanTargetApi(81114596, "Digital ps5"))
+    elif prod_type == "1":
+        # set to non-digital
+        searches.append(ScanTargetApi(81114595, "Non-Digital ps5"))
+    elif prod_type == "2":
+        # set to digital
+        searches.append(ScanTargetApi(81114596, "Digital ps5"))
+        # set to non-digital
+        searches.append(ScanTargetApi(81114595, "Non-Digital ps5"))
+
     s = sched.scheduler(time.time, time.sleep)
-    s.enter(1, 1, search.start_search, (s,))
+
+    for search in searches:
+        s.enter(1, 1, search.start_search, (s,))
+
     s.run()
